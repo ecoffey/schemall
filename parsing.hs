@@ -17,10 +17,17 @@ spaces = skipMany1 space
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
+parseStringEscapes :: Parser Char
+parseStringEscapes = do
+  first <- (noneOf "\\") <|> (char '\\')
+  case first of
+    '\\' -> anyChar
+    _    -> return first
+
 parseString :: Parser LispVal
 parseString = do
   char '"'
-  x <- many (noneOf "\"")
+  x <- many (parseStringEscapes)
   char '"'
   return $ String x
 
