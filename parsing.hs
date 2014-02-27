@@ -2,6 +2,8 @@ module Main where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
+import Numeric (readOct, readDec, readHex, readInt)
+import Data.Char (digitToInt)
 
 data LispVal =
   Atom String
@@ -41,12 +43,26 @@ parseAtom = do
     "#f" -> Bool False
     _    -> Atom atom
 
+isBinDigit :: Char -> Bool
+isBinDigit c = (c == '0' || c == '1')
+
+readBin :: (Integral a) => ReadS a
+readBin = readInt 2 isBinDigit digitToInt
+
+binDigit :: Parser Char
+binDigit = oneOf "01"
+
 parseNumber :: Parser LispVal
 --parseNumber = liftM (Number . read) $ many1 digit
-parseNumber = (many1 digit) >>= \p -> return (Number (read p))
---parseNumber = do
---  digits <- many1 digit
--- return $ Number (read digits)
+--parseNumber = (many1 digit) >>= \p -> return (Number (read p))
+parseNumber = do
+  prefix <- (string "#b") <|> (string "#o") <|> (string "#d") <|> (string "#x") <|> (many1 digit)
+  case prefix of
+    "#b" -> liftM (Number . fst . head . readBin) $ many1 binDigit
+    "#o" -> liftM (Number . fst . head . readOct) $ many1 octDigit
+    "#x" -> liftM (Number . fst . head . readHex) $ many1 hexDigit
+    "#d" -> liftM (Number . read) $ many1 digit
+    _    -> return (Number (read prefix))
 
 parseExpr :: Parser LispVal
 parseExpr =
