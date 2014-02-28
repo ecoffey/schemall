@@ -44,32 +44,12 @@ spaces = skipMany1 space
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
-parseStringEscapes :: Parser Char
-parseStringEscapes = do
-  first <- (noneOf "\\") <|> (char '\\')
-  case first of
-    '\\' -> anyChar
-    _    -> return first
-
 parseString :: Parser LispVal
 parseString = do
   char '"'
-  x <- many (parseStringEscapes)
+  x <- many letter
   char '"'
   return $ String x
-
-parseCharacter :: Parser LispVal
-parseCharacter = do
-  string "#\\"
-  char <- string "space" <|> string "newline" <|> many1 anyChar
- -- trailing <- optionMaybe (oneOf "( ")
-  case char of
-    "space" -> return $ Character ' '
-    "newline" -> return $ Character '\n'
-    _ -> return $ Character (char !! 0)
---    _ -> case trailing of
---      Just _ -> return $ Character (char !! 0)
-
 
 parseAtom :: Parser LispVal
 parseAtom = do
@@ -82,16 +62,7 @@ parseAtom = do
     _    -> Atom atom
 
 parseNumber :: Parser LispVal
---parseNumber = liftM (Number . read) $ many1 digit
---parseNumber = (many1 digit) >>= \p -> return (Number (read p))
-parseNumber = do
-  prefix <- (string "#b") <|> (string "#o") <|> (string "#d") <|> (string "#x") <|> (many1 digit) 
-  case prefix of
-    "#b" -> liftM (Number . fst . head . readBin) $ many1 binDigit
-    "#o" -> liftM (Number . fst . head . readOct) $ many1 octDigit
-    "#x" -> liftM (Number . fst . head . readHex) $ many1 hexDigit
-    "#d" -> liftM (Number . read) $ many1 digit
-    _    -> return (Number (read prefix))
+parseNumber = liftM (Number . read) $ many1 digit
 
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
@@ -110,10 +81,10 @@ parseQuoted = do
 
 parseExpr :: Parser LispVal
 parseExpr =
-  try parseCharacter
-  <|> parseAtom
+  parseAtom
   <|> parseString
   <|> parseNumber
+  <|> parseQuoted
   <|> do 
         char '('
         x <- try parseList <|> parseDottedList
