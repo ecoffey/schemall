@@ -23,6 +23,21 @@ data LispVal =
   | Character Char
   | Bool Bool
 
+unwordsList :: [LispVal] -> String
+unwordsList = unwords . map showVal
+
+showVal :: LispVal -> String
+showVal (String s) = "\"" ++ s ++ "\""
+showVal (Atom name) = name
+showVal (Number n) = show n
+showVal (Bool True) = "#t"
+showVal (Bool False) = "#f"
+showVal (List l) = "(" ++ unwordsList l ++ ")"
+showVal (DottedList h t) = "(" ++ unwordsList h ++ " . " ++ showVal t ++ ")"
+showVal (Character c) = "'" ++ [c] ++ "'"
+
+instance Show LispVal where show = showVal
+
 spaces :: Parser ()
 spaces = skipMany1 space
 
@@ -95,7 +110,7 @@ parseQuoted = do
 
 parseExpr :: Parser LispVal
 parseExpr =
-  parseCharacter
+  try parseCharacter
   <|> parseAtom
   <|> parseString
   <|> parseNumber
@@ -108,7 +123,7 @@ parseExpr =
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
   Left err -> "No match: " ++ show err
-  Right val -> "Found val"
+  Right val -> "Found val: " ++ show val
 
 main :: IO ()
 main = do
